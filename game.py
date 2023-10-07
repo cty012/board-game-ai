@@ -1,5 +1,6 @@
 import math
 import torch
+
 import game_helper as helper
 
 
@@ -86,9 +87,10 @@ class CutAndSlice:
         return tuple(i * self.n + j for i, j in self.valid_moves[player])
 
     def move(self, player, action):
+        new_board = self.board.clone()
+
         n = self.n
         pos = (action // n, action % n)
-        new_board = self.board.clone()
 
         if self.valid[player][pos] == 0:
             return new_board
@@ -150,7 +152,7 @@ class RewardCutAndSlice:
             self.cluster_kernels[1].append(torch.full((rows, cols), 1, dtype=torch.int8))
 
     def _winning_reward(self, next_state):
-        return CutAndSlice(next_state).winner() == 0
+        return CutAndSlice(self.n, next_state).winner() == 0
 
     def _quantity_reward(self, state, next_state):
         score = torch.sum(torch.eq(state, 0)) - torch.sum(torch.eq(state, 1))

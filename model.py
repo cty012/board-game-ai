@@ -6,7 +6,7 @@ class SimpleCNN(nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(32 * 3 * 9 * 9, 128)
+        self.fc1 = nn.Linear(32 * 9 * 9, 128)
         self.fc2 = nn.Linear(128, 256)
         self.fc3 = nn.Linear(256, 81)  # 9x9 board
 
