@@ -149,12 +149,12 @@ class RewardCutAndSlice:
             self.cluster_kernels[0].append(torch.full((rows, cols), 0, dtype=torch.int8))
             self.cluster_kernels[1].append(torch.full((rows, cols), 1, dtype=torch.int8))
 
-    def _winning_reward(self, new_state):
-        return CutAndSlice(new_state).winner() == 0
+    def _winning_reward(self, next_state):
+        return CutAndSlice(next_state).winner() == 0
 
-    def _quantity_reward(self, state, new_state):
+    def _quantity_reward(self, state, next_state):
         score = torch.sum(torch.eq(state, 0)) - torch.sum(torch.eq(state, 1))
-        new_score = torch.sum(torch.eq(new_state, 0)) - torch.sum(torch.eq(new_state, 1))
+        new_score = torch.sum(torch.eq(next_state, 0)) - torch.sum(torch.eq(next_state, 1))
         return (new_score - score) / (self.n ** 2)
 
     def _cluster_analysis(self, state, player):
@@ -168,11 +168,11 @@ class RewardCutAndSlice:
                         self.cluster[i, j] = 1
         return torch.sum(self.cluster)
 
-    def _cluster_reward(self, state, new_state):
-        return (self._cluster_analysis(new_state, 0) - self._cluster_analysis(new_state, 1)) - \
+    def _cluster_reward(self, state, next_state):
+        return (self._cluster_analysis(next_state, 0) - self._cluster_analysis(next_state, 1)) - \
             (self._cluster_analysis(state, 0) - self._cluster_analysis(state, 1))
 
-    def get_reward(self, state, action, new_state):
-        return self._winning_reward(new_state) * self.weights[0] + \
-            self._quantity_reward(state, new_state) + \
-            self._cluster_reward(state, new_state)
+    def get_reward(self, state, action, next_state):
+        return self._winning_reward(next_state) * self.weights[0] + \
+            self._quantity_reward(state, next_state) + \
+            self._cluster_reward(state, next_state)
