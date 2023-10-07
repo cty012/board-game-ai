@@ -13,7 +13,7 @@ class QLearningAgent:
             return chosen  # Random action
         else:  # Exploitation
             with torch.no_grad():
-                state_tensor = game.get_state().type(torch.float32).unsqueeze(0)  # Add batch dimension
+                state_tensor = game.get_state().unsqueeze(0)  # Add batch dimension
                 q_values = self.model(state_tensor)
             return torch.argmax(q_values).item()  # Greedy action based on Q-values
 
