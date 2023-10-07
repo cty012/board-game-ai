@@ -7,7 +7,7 @@ import model
 def train(args):
     my_game = game.CutAndSlice(args.n)
     my_agent = agent.QLearningAgent(model.SimpleCNN())
-    my_reward = game.RewardCutAndSlice(args.n, args.kernel_size)
+    my_reward = game.RewardCutAndSlice(args.n, args.reward_weights, args.cluster_size)
 
     for episode in range(1000):  # Train for 1000 episodes
         my_game.reset()
