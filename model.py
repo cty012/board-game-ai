@@ -6,9 +6,9 @@ class SimpleCNN(nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(32 * 9 * 9, 128)
-        self.fc2 = nn.Linear(128, 256)
-        self.fc3 = nn.Linear(256, 81)  # 9x9 board
+        self.fc1 = nn.Linear(32 * 9 * 9, 256)
+        self.fc2 = nn.Linear(256, 512)
+        self.fc3 = nn.Linear(512, 81 * 81)  # 9x9 board
 
     def forward(self, x_raw):
         # Separate the channels
@@ -23,3 +23,10 @@ class SimpleCNN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
+    def sample(self, state_tensor, valid_actions):
+        q_values = self(state_tensor).squeeze(0)
+        masked_q_values = torch.full((81 * 81,), float('-inf'))
+        for action in valid_actions:
+            masked_q_values[action] = q_values[action]
+        return torch.argmax(masked_q_values).item()

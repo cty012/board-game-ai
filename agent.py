@@ -4,19 +4,22 @@ import torch.nn as nn
 
 
 class QLearningAgent:
-    def __init__(self, network, lr, gamma):
+    def __init__(self, network, device, lr, gamma):
         self.network = network
+        self.device = device
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
         self.gamma = gamma
 
     def sample(self, game, player, epsilon):
         """Sample from the game."""
+        valid_actions = game.get_valid_actions(player)
+        if len(valid_actions) == 0:
+            return 0
+
         # Exploration
         if torch.rand(1).item() < epsilon:
-            valid_moves = game.get_valid_moves(player)
-            if len(valid_moves) == 0:
-                return 0
-            return valid_moves[torch.randint(0, len(valid_moves), (1,)).item()]
+            rand_index = torch.randint(0, len(valid_actions), (1,)).item()
+            return valid_actions[rand_index]
 
         # Exploitation
         else:
@@ -25,11 +28,11 @@ class QLearningAgent:
 
             # Disable gradient for higher efficiency
             with torch.no_grad():
-                state_tensor = game.get_state().unsqueeze(0)  # Add batch dimension
-                q_values = self.network(state_tensor)
+                state_tensor = game.get_state().unsqueeze(0).to(self.device)  # Add batch dimension
+                action = self.network.sample(state_tensor, valid_actions)
 
             # Greedy action based on Q-values
-            return torch.argmax(q_values).item()
+            return action
 
     def train(self, batch):
         """Train the network using the batch of samples."""
@@ -40,14 +43,13 @@ class QLearningAgent:
         states, actions, rewards, next_states, dones = zip(*batch)
 
         # Convert to tensors and compute Q-values
-        states = torch.stack(states)
-        actions = torch.tensor(actions, dtype=torch.long)
-        rewards = torch.tensor(rewards, dtype=torch.float)
-        next_states = torch.stack(next_states)
-        dones = torch.tensor(dones, dtype=torch.float)
+        states = torch.stack(states).to(self.device)
+        actions = torch.tensor(actions, dtype=torch.int64).to(self.device)
+        rewards = torch.tensor(rewards, dtype=torch.float).to(self.device)
+        next_states = torch.stack(next_states).to(self.device)
+        dones = torch.tensor(dones, dtype=torch.float).to(self.device)
 
-        _q_val = self.network(states)
-        q_values = _q_val.gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        q_values = self.network(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
 
         next_q_values = self.network(next_states).max(dim=1)[0]
 

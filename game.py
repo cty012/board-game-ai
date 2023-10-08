@@ -17,7 +17,6 @@ class CutAndSlice:
 
         self.board = None
         self.potential = [torch.full((n, n), 0, dtype=torch.int8) for i in range(2)]
-        self.valid = [torch.full((n, n), 0, dtype=torch.int8) for i in range(2)]
         self.valid_moves = [(), ()]
 
         if state is None:
@@ -39,28 +38,21 @@ class CutAndSlice:
 
         return torch.clamp(potential * friendly_mask, max=4)
 
-    def _calc_valid_moves(self, player, board=None, potential=None):
+    def _calc_valid_moves(self, player):
         n = self.n
-        if (board is None) or (potential is None):
-            board = self.board
-            potential = self.potential[player]
-            valid = self.valid[player]
-            valid.fill_(0)
-        else:
-            valid = torch.full((n, n), 0, dtype=torch.int8)
-
-        empty_mask = (board == -1).int()
+        empty_mask = (self.board == -1).int()
         scatter_kernel = torch.full((n+8, n+8), 0, dtype=torch.int8)
+        result = []
 
-        for i, j in zip(*(potential.nonzero(as_tuple=True))):
-            d = potential[i, j]
+        for i, j in zip(*(self.potential[player].nonzero(as_tuple=True))):
+            d = self.potential[player][i, j]
             scatter_kernel[i+4-d:i+5+d, j+4-d:j+5+d] = self.kernels[d]
-            valid += scatter_kernel[4:n+4, 4:n+4]
+            valid = torch.nonzero(scatter_kernel[4:n+4, 4:n+4] * empty_mask, as_tuple=False)
+            for r, c in valid:
+                result.append(((i.item(), j.item()), (r.item(), c.item())))
             scatter_kernel[i+4-d:i+5+d, j+4-d:j+5+d].fill_(0)
 
-        valid *= empty_mask
-        result = torch.nonzero(valid * empty_mask, as_tuple=False)
-        return tuple([(i.item(), j.item()) for i, j in result])
+        return result
 
     def get_state(self):
         return self.board.clone()
@@ -83,29 +75,24 @@ class CutAndSlice:
         mask_0 = (self.board == 0).int()
         return mask_neg1 * -1 + mask_0 * 1
 
-    def get_valid_moves(self, player):
-        return tuple(i * self.n + j for i, j in self.valid_moves[player])
+    def get_valid_actions(self, player):
+        return tuple([helper.move_to_action(move) for move in self.valid_moves[player]])
+
+    def is_valid(self, player, action):
+        src, dest = helper.action_to_move(action)
+        return self.board[src] == player and self.board[dest] == -1 and \
+            helper.dist(src, dest) <= self.potential[player][src]
 
     def move(self, player, action):
         new_board = self.board.clone()
 
-        n = self.n
-        pos = (action // n, action % n)
-
-        if self.valid[player][pos] == 0:
+        if not self.is_valid(player, action):
             return new_board
 
         # Calculate new board
-        t, b, l, r = min(pos[0], 4), min(n-1-pos[0], 4), min(pos[1], 4), min(n-1-pos[1], 4)
-        target = new_board[pos[0]-t:pos[0]+b+1, pos[1]-l:pos[1]+r+1]
-        sources = torch.nonzero(self.potential[player][pos[0]-t:pos[0]+b+1, pos[1]-l:pos[1]+r+1] + torch.tensor([
-            [-helper.dist((t, l), (i, j)) for j in range(l + r + 1)]
-            for i in range(t + b + 1)
-        ], dtype=torch.int8) >= 0, as_tuple=False)
-
-        for i, j in sources:
-            for grid in helper.grid_pass_thru_by_line((t, l), (i, j)):
-                target[tuple(grid)] = player
+        src, dest = helper.action_to_move(action)
+        for grid in helper.grid_pass_thru_by_line(src, dest):
+            new_board[tuple(grid)] = player
 
         return new_board
 

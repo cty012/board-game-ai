@@ -12,6 +12,21 @@ def generate_kernel(d):
     ]
 
 
+def move_to_action(move):
+    (i1, j1), (i2, j2) = move
+    return (i1 * 9 + j1) * 81 + (i2 * 9 + j2)
+
+
+def action_to_move(action):
+    src = action // 81
+    dest = action % 81
+    i1 = src // 9
+    j1 = src % 9
+    i2 = dest // 9
+    j2 = dest % 9
+    return (i1, j1), (i2, j2)
+
+
 def grid_pass_thru_by_line(start, end):
     """Get all grids passed through by the line start---end"""
     x1, y1 = start

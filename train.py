@@ -7,16 +7,18 @@ import arg
 import game
 import model
 
+import game_helper as helper
 
-episode = 0
+
+episode = -1
 log_verbose = 1
 log_frequency = 50
 save_frequency = 500
 
 
-def log(message, verbose):
+def log(message, verbose_level):
     """A very simple logging function."""
-    if ((episode + 1) % log_frequency == 0) and (verbose <= log_verbose):
+    if ((episode + 1) % log_frequency == 0) and (verbose_level <= log_verbose):
         print(message)
 
 
@@ -27,16 +29,19 @@ def save_model(network, directory):
         torch.save(network.state_dict(), f"{directory}/{episode + 1}.pth")
 
 
-def train(args):
+def train(args, device):
     """Train the model, log outputs, and save weights to file."""
     global episode
     timestamp_str = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    log(f"Using device: {device}", 0)
+    log(f"timestamp: {timestamp_str}", 0)
 
     # Define all components
     my_game = game.CutAndSlice(args.n)
     my_replay_buffer = agent.ReplayBuffer(args.capacity)
     my_network = model.SimpleCNN()
-    my_agent = agent.QLearningAgent(my_network, args.lr, args.gamma)
+    my_network.to(device)
+    my_agent = agent.QLearningAgent(my_network, device, args.lr, args.gamma)
     my_reward = game.RewardCutAndSlice(args.n, args.reward_weights, args.cluster_size)
     my_epsilon = agent.Epsilon(args.epsilon_max, args.epsilon_min, args.epsilon_decay)
 
@@ -71,4 +76,4 @@ def train(args):
 
 
 if __name__ == "__main__":
-    train(arg.Args())
+    train(arg.Args(), device=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
