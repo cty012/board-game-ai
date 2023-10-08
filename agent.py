@@ -2,6 +2,8 @@ import random
 import torch
 import torch.nn as nn
 
+from game import normalize
+
 
 class QLearningAgent:
     def __init__(self, network, device, lr, gamma):
@@ -46,7 +48,7 @@ class QLearningAgent:
         states = torch.stack(states).to(self.device)
         actions = torch.tensor(actions, dtype=torch.int64).to(self.device)
         rewards = torch.tensor(rewards, dtype=torch.float).to(self.device)
-        next_states = torch.stack(next_states).to(self.device)
+        next_states = torch.stack([normalize(state, 1) for state in next_states]).to(self.device)
         dones = torch.tensor(dones, dtype=torch.float).to(self.device)
 
         q_values = self.network(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)

@@ -59,8 +59,8 @@ def train(args, device):
             my_game.set_state(next_state)
 
             # Normalize game state to eliminate player difference
-            state_normalized = my_game.normalize(state, player)
-            next_state_normalized = my_game.normalize(next_state, player)
+            state_normalized = game.normalize(state, player)
+            next_state_normalized = game.normalize(next_state, player)
 
             # Calculate reward based on game state or outcome
             reward = my_reward.get_reward(state_normalized, action, next_state_normalized)

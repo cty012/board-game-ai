@@ -4,6 +4,14 @@ import torch
 import game_helper as helper
 
 
+def normalize(board, player):
+    if player:
+        return board.clone()
+    mask_neg1 = (board == -1).int()
+    mask_0 = (board == 0).int()
+    return mask_neg1 * -1 + mask_0 * 1
+
+
 class CutAndSlice:
     def __init__(self, n, state=None):
         self.n = n
@@ -67,13 +75,6 @@ class CutAndSlice:
 
     def reset(self):
         self.set_state(self.init_board)
-
-    def normalize(self, board, player):
-        if player:
-            return board.clone()
-        mask_neg1 = (self.board == -1).int()
-        mask_0 = (self.board == 0).int()
-        return mask_neg1 * -1 + mask_0 * 1
 
     def get_valid_actions(self, player):
         return tuple([helper.move_to_action(move) for move in self.valid_moves[player]])
