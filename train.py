@@ -42,7 +42,7 @@ def train(args, device):
     my_network = model.SimpleCNN()
     my_network.to(device)
     my_agent = agent.QLearningAgent(my_network, device, args.lr, args.gamma)
-    my_reward = game.RewardCutAndSlice(args.n, args.reward_weights, args.cluster_size)
+    my_reward = game.RewardCutAndSlice(args.n, args.reward_weights, args.reward_scale, args.cluster_size)
     my_epsilon = agent.Epsilon(args.epsilon_max, args.epsilon_min, args.epsilon_decay)
 
     # Train `args.total_episodes` games

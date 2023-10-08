@@ -5,7 +5,7 @@ import game_helper as helper
 
 
 def normalize(board, player):
-    if player:
+    if player == 0:
         return board.clone()
     mask_neg1 = (board == -1).int()
     mask_0 = (board == 0).int()
@@ -110,9 +110,10 @@ class CutAndSlice:
 
 
 class RewardCutAndSlice:
-    def __init__(self, n, weights, cluster_size):
+    def __init__(self, n, weights, scale, cluster_size):
         self.n = n
         self.weights = weights
+        self.scale = scale
         self.cluster_size = cluster_size
 
         # Generate kernels for faster cluster analysis
@@ -140,11 +141,17 @@ class RewardCutAndSlice:
             self.cluster_kernels[1].append(torch.full((rows, cols), 1, dtype=torch.int8))
 
     def _winning_reward(self, next_state):
-        return CutAndSlice(self.n, next_state).winner() == 0
+        winner = CutAndSlice(self.n, next_state).winner()
+        if winner == 0:
+            return 1
+        elif winner == -1:
+            return 0
+        else:
+            return -1
 
     def _quantity_reward(self, state, next_state):
-        score = torch.sum(torch.eq(state, 0)) - torch.sum(torch.eq(state, 1))
-        new_score = torch.sum(torch.eq(next_state, 0)) - torch.sum(torch.eq(next_state, 1))
+        score = torch.sum(torch.eq(state, 0)).item() - torch.sum(torch.eq(state, 1)).item()
+        new_score = torch.sum(torch.eq(next_state, 0)).item() - torch.sum(torch.eq(next_state, 1)).item()
         return (new_score - score) / (self.n ** 2)
 
     def _cluster_analysis(self, state, player):
@@ -156,13 +163,16 @@ class RewardCutAndSlice:
                 for j in range(self.n - cols + 1):
                     if torch.equal(state[i:i+rows, j:j+cols], self.cluster_kernels[player][k]):
                         self.cluster[i, j] = 1
-        return torch.sum(self.cluster)
+        return torch.sum(self.cluster).item()
 
     def _cluster_reward(self, state, next_state):
-        return (self._cluster_analysis(next_state, 0) - self._cluster_analysis(next_state, 1)) - \
-            (self._cluster_analysis(state, 0) - self._cluster_analysis(state, 1))
+        new_score = self._cluster_analysis(next_state, 0) - self._cluster_analysis(next_state, 1)
+        score = self._cluster_analysis(state, 0) - self._cluster_analysis(state, 1)
+        return (new_score - score) / (self.n ** 2)
 
     def get_reward(self, state, action, next_state):
-        return self._winning_reward(next_state) * self.weights[0] + \
-            self._quantity_reward(state, next_state) + \
-            self._cluster_reward(state, next_state)
+        winning_reward = self._winning_reward(next_state)
+        quantity_reward = self._quantity_reward(state, next_state)
+        cluster_reward = self._cluster_reward(state, next_state)
+        reward = winning_reward * self.weights[0] + quantity_reward * self.weights[1] + cluster_reward * self.weights[2]
+        return reward * self.scale

@@ -24,11 +24,11 @@ def display_game(my_game):
 
 
 if __name__ == "__main__":
-    print("\033[91mX\033[0m")
     my_game = game.CutAndSlice(9)
     player = 0
     my_network = model.SimpleCNN()
-    my_network.load_state_dict(torch.load("saved_models/2023-10-07_10-57-32/10000.pth", map_location=torch.device('cpu')))
+    my_network.load_state_dict(
+        torch.load("saved_models/2023-10-08_00-30-20/5000.pth", map_location=torch.device('cpu')))
 
     while not my_game.done():
         display_game(my_game)
